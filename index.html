@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kabin</title>
+<meta name="description" content="Kıyafetin fotoğrafını çek, üzerinde nasıl durduğunu gör.">
+<meta name="theme-color" content="#F2EFF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16121A" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kabin">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Düzen: tek sütun, telefon öncelikli; deneme kabini etiketi gibi iki "askı" kartı + büyük eylem düğmesi */
+:root {
+  --bg: #F2EFF3;
+  --surface: #FFFFFF;
+  --ink: #1E1726;
+  --muted: #6B6274;
+  --line: #DED7E2;
+  --accent: #B4235A;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #F7E3EB;
+  --ok: #1F7A4D;
+  --warn: #9A5B00;
+  --err: #B42318;
+  --err-soft: #FCE8E6;
+  --shadow: 0 1px 2px rgba(30,23,38,.06), 0 8px 24px rgba(30,23,38,.06);
+  --f-display: "Gloock", "Georgia", "Times New Roman", serif;
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-tag: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16121A; --surface: #211C27; --ink: #F0EAF3; --muted: #A79DB0; --line: #3A3242;
+    --accent: #F0709C; --accent-ink: #26101A; --accent-soft: #3A1E2A;
+    --ok: #5CC795; --warn: #E8B04B; --err: #FF8A80; --err-soft: #3A1F1F;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16121A; --surface: #211C27; --ink: #F0EAF3; --muted: #A79DB0; --line: #3A3242;
+  --accent: #F0709C; --accent-ink: #26101A; --accent-soft: #3A1E2A;
+  --ok: #5CC795; --warn: #E8B04B; --err: #FF8A80; --err-soft: #3A1F1F;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--f-body);
+  padding-inline: 16px;
+  padding-block: calc(env(safe-area-inset-top, 0px) + 8px) calc(env(safe-area-inset-bottom, 0px) + 32px);
+}
+img { max-width: 100%; display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.wrap { max-width: 520px; margin: 0 auto; display: grid; gap: 18px; }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px 2px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font: 400 34px/1 var(--f-display); margin: 0; letter-spacing: -.01em; }
+.tag {
+  font: 500 10.5px/1 var(--f-tag); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px;
+}
+.icon-btn {
+  width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); display: grid; place-items: center;
+}
+.icon-btn svg { width: 20px; height: 20px; stroke: var(--ink); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.lede { margin: 0; color: var(--muted); max-width: 46ch; }
+
+.notice {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; font-size: 14px;
+}
+.notice b { font-weight: 600; }
+.notice button { margin-left: auto; flex: none; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.slot {
+  background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow);
+  padding: 10px; display: grid; gap: 10px; min-width: 0; position: relative;
+}
+.slot::before {
+  /* askı deliği: kıyafet etiketi göndermesi */
+  content: ""; position: absolute; top: 10px; left: 50%; width: 8px; height: 8px; margin-left: -4px;
+  border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg);
+}
+.slot-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding-top: 4px; }
+.slot-head .tag { border: 0; padding: 0; }
+.slot-head .step { font: 500 10.5px/1 var(--f-tag); color: var(--accent); letter-spacing: .08em; }
+.frame {
+  aspect-ratio: 3 / 4; width: 100%; max-width: 100%; border-radius: 10px; overflow: hidden;
+  background: var(--bg); border: 1.5px dashed var(--line); display: grid; place-items: center;
+  position: relative;
+}
+.frame.filled { border-style: solid; border-color: transparent; }
+.frame img { width: 100%; height: 100%; object-fit: cover; }
+.frame .ph { display: grid; justify-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; text-align: center; padding: 10px; }
+.frame .ph svg { width: 54px; height: 54px; stroke: var(--line); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 10px;
+  padding: 9px 6px; font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; justify-content: center;
+  min-height: 40px;
+}
+.btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.btn:active { transform: translateY(1px); }
+label.btn { position: relative; overflow: hidden; }
+label.btn input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+.cats { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 8px 14px; font-weight: 600; font-size: 14px;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.field-label { font: 500 10.5px/1 var(--f-tag); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: block; }
+
+.go {
+  width: 100%; border: 0; border-radius: 16px; background: var(--accent); color: var(--accent-ink);
+  font: 400 22px/1 var(--f-display); padding: 18px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: var(--shadow);
+}
+.go:disabled { opacity: .45; cursor: not-allowed; }
+.go small { font: 600 12px/1 var(--f-body); opacity: .8; }
+
+.status {
+  background: var(--surface); border-radius: var(--r); padding: 14px; box-shadow: var(--shadow);
+  display: grid; gap: 10px;
+}
+.status-row { display: flex; align-items: center; gap: 12px; }
+.spinner { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin 0.9s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.status-text { font-weight: 600; }
+.status-sub { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.bar { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; transition: width .6s ease; }
+
+.error {
+  background: var(--err-soft); color: var(--ink); border-radius: var(--r); padding: 12px 14px; font-size: 14px;
+  border-left: 3px solid var(--err);
+}
+.error b { color: var(--err); }
+.error details { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-word; }
+
+.result { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); padding: 12px; display: grid; gap: 12px; }
+.result-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.result-head h2 { font: 400 24px/1.1 var(--f-display); margin: 0; }
+.result-img { position: relative; border-radius: 10px; overflow: hidden; background: var(--bg); user-select: none; -webkit-user-select: none; -webkit-touch-callout: default; }
+.result-img img { width: 100%; height: auto; }
+.result-img .orig { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--bg); opacity: 0; transition: opacity .15s; }
+.result-img.show-orig .orig { opacity: 1; }
+.hold-hint { position: absolute; left: 10px; bottom: 10px; background: rgba(30,23,38,.72); color: #fff; font: 500 11px/1 var(--f-tag); letter-spacing: .05em; padding: 7px 9px; border-radius: 999px; }
+.result-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; }
+a.btn { color: var(--ink); text-decoration: none; }
+.meta { color: var(--muted); font-size: 12.5px; }
+
+.tips { background: var(--surface); border-radius: var(--r); padding: 4px 14px; box-shadow: var(--shadow); }
+.tips summary { padding: 12px 0; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+.tips summary::-webkit-details-marker { display: none; }
+.tips summary::after { content: "+"; font: 400 22px/1 var(--f-display); color: var(--muted); }
+.tips[open] summary::after { content: "–"; }
+.tips ul { margin: 0 0 14px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+.tips li::marker { color: var(--accent); }
+
+.closet h2 { font: 400 22px/1.1 var(--f-display); margin: 0 0 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.closet h2 .tag { border: 0; padding: 0; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid button { padding: 0; border: 0; border-radius: 10px; overflow: hidden; aspect-ratio: 3/4; background: var(--surface); position: relative; }
+.grid img { width: 100%; height: 100%; object-fit: cover; }
+.grid .cat { position: absolute; left: 6px; bottom: 6px; background: rgba(30,23,38,.72); color: #fff; font: 500 9.5px/1 var(--f-tag); letter-spacing: .06em; padding: 5px 6px; border-radius: 999px; text-transform: uppercase; }
+.empty { color: var(--muted); font-size: 14px; background: var(--surface); border: 1.5px dashed var(--line); border-radius: var(--r); padding: 16px; text-align: center; }
+
+footer.foot { color: var(--muted); font-size: 12px; text-align: center; max-width: 46ch; margin: 4px auto 0; }
+
+/* Ayarlar paneli */
+dialog {
+  border: 0; padding: 0; background: var(--surface); color: var(--ink); border-radius: 18px;
+  width: min(520px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+dialog::backdrop { background: rgba(22,18,26,.55); }
+.sheet { padding: 20px; display: grid; gap: 16px; }
+.sheet h2 { font: 400 26px/1.1 var(--f-display); margin: 0; }
+.sheet p { margin: 0; color: var(--muted); font-size: 14px; }
+.input {
+  width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; font-size: 15px;
+}
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg button { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px 4px; font-size: 13px; font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.sheet-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); padding-inline: 18px; }
+.btn.danger { color: var(--err); }
+.help { font-size: 13px; color: var(--muted); }
+.help a { color: var(--accent); font-weight: 600; }
+.help ol { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  box-shadow: var(--shadow); z-index: 10; max-width: calc(100vw - 32px);
+}
+@media (max-width: 360px) {
+  .pair { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Kabin</h1>
+      <span class="tag">sanal deneme</span>
+    </div>
+    <button class="icon-btn" id="openSettings" aria-label="Ayarlar">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <p class="lede">Kendi fotoğrafını bir kez ekle. Sonra beğendiğin kıyafetin fotoğrafını çek, üzerinde nasıl durduğunu gör.</p>
+
+  <div class="notice" id="tokenNotice" hidden>
+    <div><b>Hugging Face anahtarını ekle.</b> Anahtarsız da çalışır, ama günlük ücretsiz süre daha kısa olur.</div>
+    <button class="btn" id="noticeSettings" type="button">Ekle</button>
+  </div>
+
+  <section class="pair" aria-label="Fotoğraflar">
+    <div class="slot">
+      <div class="slot-head"><span class="step">01</span><span class="tag">Sen</span></div>
+      <div class="frame" id="personFrame">
+        <div class="ph">
+          <svg viewBox="0 0 48 48"><circle cx="24" cy="13" r="7"/><path d="M10 44v-6c0-7 6-12 14-12s14 5 14 12v6"/></svg>
+          Önden, tam boy veya belden yukarı
+        </div>
+      </div>
+      <div class="btn-row">
+        <label class="btn"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Çek<input type="file" id="personCam" accept="image/*" capture="user"></label>
+        <label class="btn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Galeri<input type="file" id="personPick" accept="image/*"></label>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-head"><span class="step">02</span><span class="tag">Kıyafet</span></div>
+      <div class="frame" id="garmentFrame">
+        <div class="ph">
+          <svg viewBox="0 0 48 48"><path d="M24 10a4 4 0 1 1 4 4c-2 0-4 1.5-4 3.5V20"/><path d="M24 20L6 34h36z"/></svg>
+          Düz zeminde veya askıda, tek parça
+        </div>
+      </div>
+      <div class="btn-row">
+        <label class="btn"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Çek<input type="file" id="garmentCam" accept="image/*" capture="environment"></label>
+        <label class="btn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Galeri<input type="file" id="garmentPick" accept="image/*"></label>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="field-label" id="catLabel">03 · Kıyafet türü</span>
+    <div class="cats" role="group" aria-labelledby="catLabel">
+      <button class="chip" data-cat="upper" aria-pressed="true" type="button">Üst giyim</button>
+      <button class="chip" data-cat="lower" aria-pressed="false" type="button">Alt giyim</button>
+      <button class="chip" data-cat="dress" aria-pressed="false" type="button">Elbise</button>
+    </div>
+  </section>
+
+  <button class="go" id="go" type="button" disabled>Üzerimde göster</button>
+
+  <div class="status" id="status" hidden>
+    <div class="status-row">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <div class="status-text" id="statusText">Modele bağlanılıyor…</div>
+        <div class="status-sub" id="statusSub">Genelde 20–60 saniye sürer.</div>
+      </div>
+    </div>
+    <div class="bar"><i id="statusBar"></i></div>
+  </div>
+
+  <div class="error" id="error" hidden></div>
+
+  <section class="result" id="result" hidden>
+    <div class="result-head">
+      <h2>Üzerinde</h2>
+      <span class="meta" id="resultMeta"></span>
+    </div>
+    <div class="result-img" id="resultImg">
+      <img id="resultPic" alt="Kıyafetin üzerinde görünümü">
+      <img class="orig" id="resultOrig" alt="Orijinal fotoğraf">
+      <span class="hold-hint">Basılı tut: orijinal</span>
+    </div>
+    <div class="result-actions">
+      <a class="btn" id="saveBtn" download="kabin.jpg" href="#"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Kaydet</a>
+      <button class="btn" id="shareBtn" type="button"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Paylaş</button>
+      <button class="btn" id="retryBtn" type="button"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>Yeniden</button>
+    </div>
+  </section>
+
+  <details class="tips">
+    <summary>İyi sonuç için çekim ipuçları</summary>
+    <ul>
+      <li><b>Senin fotoğrafın:</b> Önden, dik dur, kollar hafifçe yanlarda. Tam boy veya belden yukarı.</li>
+      <li>Gün ışığı veya düz bir ışık; arka plan sade olsun.</li>
+      <li>Üzerinde vücuda oturan, düz renkli bir kıyafet olsun. Kalın mont ya da bol hırka sonucu bozar.</li>
+      <li><b>Kıyafet fotoğrafı:</b> Düz zemine serilmiş veya askıda, kırışıksız, tek parça ve tamamı kadrajda.</li>
+      <li>Mağaza sitesindeki ürün görselleri de çok iyi çalışır; ekran görüntüsünü galeriden seçebilirsin.</li>
+      <li>Sonuç kıyafetin görünümünü gösterir; beden ve kalıp uyumunu garanti etmez.</li>
+    </ul>
+  </details>
+
+  <section class="closet">
+    <h2>Denemelerim <span class="tag" id="closetCount"></span></h2>
+    <div class="grid" id="closetGrid"></div>
+    <div class="empty" id="closetEmpty">Henüz deneme yok. İlk sonucun burada saklanır.</div>
+  </section>
+
+  <footer class="foot">
+    Fotoğrafların yalnızca bu cihazda saklanır. Deneme sırasında Hugging Face'teki ücretsiz modele gönderilir.
+  </footer>
+</div>
+
+<dialog id="settings">
+  <form class="sheet" method="dialog" id="settingsForm">
+    <h2>Ayarlar</h2>
+
+    <div>
+      <label class="field-label" for="token">Hugging Face anahtarı (token)</label>
+      <input class="input" id="token" type="password" autocomplete="off" spellcheck="false" placeholder="hf_…">
+      <div class="help">
+        Anahtar yalnızca bu telefonda saklanır. Almak için:
+        <ol>
+          <li><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">huggingface.co/settings/tokens</a> sayfasını aç.</li>
+          <li><b>Create new token</b> → türü <b>Read</b> seç → oluştur.</li>
+          <li>Kopyala ve buraya yapıştır.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div>
+      <span class="field-label" id="engLabel">Motor</span>
+      <div class="seg" role="group" aria-labelledby="engLabel">
+        <button type="button" data-eng="auto" aria-pressed="true">Otomatik</button>
+        <button type="button" data-eng="idm" aria-pressed="false">IDM-VTON</button>
+        <button type="button" data-eng="leffa" aria-pressed="false">Leffa</button>
+      </div>
+      <p class="help" style="margin-top:8px">Otomatik: üst giyimde IDM-VTON, alt giyim ve elbisede Leffa. Biri hata verirse diğeri denenir. IDM-VTON yalnızca üst giyimi destekler.</p>
+    </div>
+
+    <div>
+      <label class="field-label" for="desc">Kıyafet tarifi (İngilizce, isteğe bağlı)</label>
+      <input class="input" id="desc" type="text" placeholder="ör. white linen shirt">
+      <p class="help" style="margin-top:6px">Yalnızca IDM-VTON kullanır; deseni ve dokuyu biraz daha doğru verebilir.</p>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn danger" type="button" id="clearAll">Tüm verileri sil</button>
+      <button class="btn" type="button" id="settingsCancel">Vazgeç</button>
+      <button class="btn primary" type="button" id="settingsSave">Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const GRADIO_CLIENT = "https://cdn.jsdelivr.net/npm/@gradio/client@2.7.0/dist/browser.js";
+  const ENGINES = {
+    idm:   { space: "yisol/IDM-VTON",   name: "IDM-VTON", cats: ["upper"] },
+    leffa: { space: "franciszzj/Leffa", name: "Leffa",    cats: ["upper", "lower", "dress"] }
+  };
+  const CAT_NAMES = { upper: "Üst giyim", lower: "Alt giyim", dress: "Elbise" };
+  const MAX_LOOKS = 30;
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- Ayarlar (localStorage, hata toleranslı) ----------
+  const settings = { token: "", engine: "auto", desc: "" };
+  try { Object.assign(settings, JSON.parse(localStorage.getItem("kabin.settings") || "{}")); } catch (_) {}
+  function saveSettings() { try { localStorage.setItem("kabin.settings", JSON.stringify(settings)); } catch (_) {} }
+
+  // ---------- IndexedDB: kişi fotoğrafı ve denemeler ----------
+  let dbp = null;
+  function db() {
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      const r = indexedDB.open("kabin", 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        d.createObjectStore("kv");
+        d.createObjectStore("looks", { keyPath: "id", autoIncrement: true });
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return dbp;
+  }
+  async function tx(store, mode, fn) {
+    try {
+      const d = await db();
+      return await new Promise((res, rej) => {
+        const t = d.transaction(store, mode);
+        const s = t.objectStore(store);
+        const out = fn(s);
+        t.oncomplete = () => res(out && "result" in out ? out.result : out);
+        t.onerror = () => rej(t.error);
+      });
+    } catch (e) { console.warn("IndexedDB", e); return null; }
+  }
+  const kvGet = (k) => tx("kv", "readonly", (s) => s.get(k));
+  const kvSet = (k, v) => tx("kv", "readwrite", (s) => s.put(v, k));
+  const looksAll = () => tx("looks", "readonly", (s) => s.getAll());
+  const looksAdd = (v) => tx("looks", "readwrite", (s) => s.add(v));
+  const looksDel = (id) => tx("looks", "readwrite", (s) => s.delete(id));
+
+  // ---------- Durum ----------
+  const state = { person: null, garment: null, cat: "upper", busy: false, seed: 42, lastResultBlob: null };
+
+  // ---------- Görsel hazırlama: yönü düzelt, 1024 px'e küçült, JPEG ----------
+  function loadImage(blob) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => { res(img); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Görsel açılamadı. Farklı bir fotoğraf dene (HEIC yerine JPEG).")); };
+      img.src = url;
+    });
+  }
+  async function prepare(file, max = 1024) {
+    const img = await loadImage(file);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const s = Math.min(1, max / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * s); c.height = Math.round(h * s);
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); // şeffaf PNG'ler için beyaz zemin
+    g.drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob(res, "image/jpeg", 0.92));
+  }
+
+  function showInFrame(frame, blob) {
+    const old = frame.querySelector("img");
+    if (old) URL.revokeObjectURL(old.src);
+    frame.querySelectorAll(".ph, img").forEach((n) => n.remove());
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(blob);
+    img.alt = "";
+    frame.appendChild(img);
+    frame.classList.add("filled");
+  }
+
+  async function onPersonFile(e) {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      state.person = await prepare(f);
+      showInFrame($("personFrame"), state.person);
+      await kvSet("person", state.person);
+      toast("Fotoğrafın kaydedildi");
+    } catch (err) { showError(err.message); }
+    refresh();
+  }
+  async function onGarmentFile(e) {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      state.garment = await prepare(f);
+      showInFrame($("garmentFrame"), state.garment);
+    } catch (err) { showError(err.message); }
+    refresh();
+  }
+  $("personCam").addEventListener("change", onPersonFile);
+  $("personPick").addEventListener("change", onPersonFile);
+  $("garmentCam").addEventListener("change", onGarmentFile);
+  $("garmentPick").addEventListener("change", onGarmentFile);
+
+  document.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
+    state.cat = b.dataset.cat;
+    document.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    refresh();
+  }));
+
+  function refresh() {
+    const go = $("go");
+    go.disabled = state.busy || !state.person || !state.garment;
+    if (state.busy) go.textContent = "Hazırlanıyor…";
+    else if (!state.person) go.textContent = "Önce kendi fotoğrafını ekle";
+    else if (!state.garment) go.textContent = "Şimdi kıyafeti ekle";
+    else go.textContent = "Üzerimde göster";
+    $("tokenNotice").hidden = !!settings.token;
+  }
+
+  // ---------- Motor seçimi ----------
+  function enginePlan(cat) {
+    if (settings.engine === "idm") return cat === "upper" ? ["idm"] : ["leffa"];
+    if (settings.engine === "leffa") return ["leffa"];
+    return cat === "upper" ? ["idm", "leffa"] : ["leffa"];
+  }
+
+  let gradioMod = null;
+  async function gradio() {
+    if (!gradioMod) gradioMod = await import(GRADIO_CLIENT);
+    return gradioMod;
+  }
+
+  async function runEngine(key, onStatus) {
+    const { Client, handle_file } = await gradio();
+    onStatus({ text: ENGINES[key].name + " modeline bağlanılıyor…", pct: 8 });
+    const opts = settings.token ? { token: settings.token } : {};
+    const app = await Client.connect(ENGINES[key].space, opts);
+
+    let endpoint, data;
+    if (key === "idm") {
+      endpoint = "/tryon";
+      data = [
+        { background: handle_file(state.person), layers: [], composite: null },
+        handle_file(state.garment),
+        (settings.desc || "a garment").trim(),
+        true,   // otomatik maske
+        true,   // otomatik kırp ve yeniden boyutlandır (telefon fotoğrafları için)
+        30,     // adım
+        state.seed
+      ];
+    } else {
+      endpoint = "/leffa_predict_vt";
+      data = [
+        handle_file(state.person),
+        handle_file(state.garment),
+        false,                                   // referans hızlandırma
+        30,                                      // adım
+        2.5,                                     // guidance
+        state.seed,
+        state.cat === "upper" ? "viton_hd" : "dress_code",
+        { upper: "upper_body", lower: "lower_body", dress: "dresses" }[state.cat],
+        false                                    // repaint
+      ];
+    }
+
+    onStatus({ text: "Fotoğraflar gönderiliyor…", pct: 15 });
+    const job = app.submit(endpoint, data);
+    let out = null;
+    for await (const msg of job) {
+      if (msg.type === "status") {
+        if (msg.stage === "error") throw new Error(msg.message || "Model bir hata döndürdü.");
+        if (msg.stage === "pending") {
+          const pos = typeof msg.position === "number" ? msg.position : null;
+          onStatus({ text: pos ? `Sıradasın: ${pos + 1}. sıra` : "Sıraya alındı…", pct: 25 });
+        } else if (msg.stage === "generating" || msg.stage === "processing") {
+          onStatus({ text: "Kıyafet üzerine giydiriliyor…", pct: 55 });
+        } else if (msg.stage === "complete") {
+          if (out) break;
+        }
+      } else if (msg.type === "data") {
+        out = msg.data && msg.data[0];
+        if (out) break;
+      }
+    }
+    if (!out) throw new Error("Modelden sonuç gelmedi.");
+    return typeof out === "string" ? out : (out.url || out.path);
+  }
+
+  function friendly(err) {
+    const m = (err && err.message) || String(err || "");
+    if (/quota|GPU duration|exceeded/i.test(m)) {
+      const t = m.match(/try again in ([0-9:]+)/i);
+      return "Günlük ücretsiz GPU süren doldu." + (t ? ` Yaklaşık ${t[1]} sonra yenilenir.` : " Birkaç saat sonra yenilenir.") +
+        (settings.token ? "" : " Ayarlar'a Hugging Face anahtarını eklersen süre artar.");
+    }
+    if (/401|403|unauthori|invalid.*token|credentials/i.test(m)) return "Hugging Face anahtarı geçersiz görünüyor. Ayarlar'dan kontrol et.";
+    if (/sleep|paused|building|could not resolve|not found|404|space.*(metadata|status)/i.test(m)) return "Model şu an kapalı veya yeniden başlıyor. Birkaç dakika sonra ya da diğer motorla dene.";
+    if (/failed to fetch|networkerror|load failed|import/i.test(m)) return "İnternet bağlantısı veya model sunucusuna erişim sorunu. Bağlantını kontrol edip tekrar dene.";
+    if (/too large|413/i.test(m)) return "Fotoğraf çok büyük. Farklı bir fotoğraf dene.";
+    return "Deneme tamamlanamadı. Fotoğrafların önden ve net olduğundan emin olup tekrar dene.";
+  }
+  const isQuota = (e) => /quota|GPU duration|exceeded/i.test((e && e.message) || "");
+
+  // ---------- Çalıştır ----------
+  let timer = null;
+  function startStatus() {
+    const t0 = Date.now();
+    $("status").hidden = false; $("error").hidden = true;
+    $("statusText").textContent = "Hazırlanıyor…"; $("statusBar").style.width = "4%";
+    clearInterval(timer);
+    timer = setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      $("statusSub").textContent = `${s} sn · genelde 20–60 sn sürer`;
+    }, 500);
+  }
+  function setStatus({ text, pct }) {
+    if (text) $("statusText").textContent = text;
+    if (pct) $("statusBar").style.width = pct + "%";
+  }
+  function stopStatus() { clearInterval(timer); $("status").hidden = true; }
+
+  function showError(msg, raw) {
+    const el = $("error");
+    el.innerHTML = "";
+    const b = document.createElement("b"); b.textContent = "Olmadı. ";
+    el.append(b, document.createTextNode(msg));
+    if (raw) {
+      const d = document.createElement("details");
+      const s = document.createElement("summary"); s.textContent = "Teknik ayrıntı";
+      d.append(s, document.createTextNode(raw));
+      el.appendChild(d);
+    }
+    el.hidden = false;
+  }
+
+  async function tryOn() {
+    if (state.busy || !state.person || !state.garment) return;
+    state.busy = true; refresh(); startStatus();
+    const plan = enginePlan(state.cat);
+    let lastErr = null, used = null, url = null;
+    for (const key of plan) {
+      try {
+        url = await runEngine(key, setStatus);
+        used = key; break;
+      } catch (e) {
+        console.warn(key, e);
+        lastErr = e;
+        if (isQuota(e)) break; // kota hesap bazlı; diğer motor da aynı kotayı kullanır
+        if (plan.length > 1) setStatus({ text: "İlk motor yanıt vermedi, diğeri deneniyor…", pct: 10 });
+      }
+    }
+    if (!url) {
+      stopStatus(); state.busy = false; refresh();
+      showError(friendly(lastErr), lastErr && lastErr.message);
+      return;
+    }
+    setStatus({ text: "Sonuç indiriliyor…", pct: 92 });
+    let blob = null;
+    try {
+      const r = await fetch(url, settings.token ? { headers: { Authorization: "Bearer " + settings.token } } : {});
+      if (r.ok) blob = await r.blob();
+    } catch (_) {}
+    if (!blob) { try { const r = await fetch(url); if (r.ok) blob = await r.blob(); } catch (_) {} }
+    stopStatus(); state.busy = false; refresh();
+
+    const look = { date: Date.now(), cat: state.cat, engine: used, seed: state.seed, result: blob, person: state.person, garment: state.garment };
+    showResult(look, blob ? null : url);
+    if (blob) { await looksAdd(look); await trimLooks(); renderCloset(); }
+  }
+  $("go").addEventListener("click", () => { state.seed = 42; tryOn(); });
+  $("retryBtn").addEventListener("click", () => { state.seed = Math.floor(Math.random() * 100000); tryOn(); });
+
+  // ---------- Sonuç ----------
+  let resultUrl = null, origUrl = null;
+  function showResult(look, remoteUrl) {
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
+    if (origUrl) URL.revokeObjectURL(origUrl);
+    resultUrl = look.result ? URL.createObjectURL(look.result) : remoteUrl;
+    origUrl = look.person ? URL.createObjectURL(look.person) : null;
+    $("resultPic").src = resultUrl;
+    if (origUrl) $("resultOrig").src = origUrl;
+    $("saveBtn").href = resultUrl;
+    $("saveBtn").download = `kabin-${new Date(look.date).toISOString().slice(0, 10)}.jpg`;
+    state.lastResultBlob = look.result || null;
+    $("shareBtn").hidden = !(look.result && navigator.canShare && navigator.canShare({ files: [new File([look.result], "kabin.jpg", { type: look.result.type || "image/jpeg" })] }));
+    $("resultMeta").textContent = `${CAT_NAMES[look.cat] || ""} · ${ENGINES[look.engine] ? ENGINES[look.engine].name : ""}`;
+    $("result").hidden = false;
+    $("result").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
+  const ri = $("resultImg");
+  const holdOn = (e) => { if (origUrl) { ri.classList.add("show-orig"); } };
+  const holdOff = () => ri.classList.remove("show-orig");
+  ri.addEventListener("pointerdown", holdOn);
+  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => ri.addEventListener(ev, holdOff));
+  ri.addEventListener("contextmenu", (e) => { if (ri.classList.contains("show-orig")) e.preventDefault(); });
+
+  $("shareBtn").addEventListener("click", async () => {
+    if (!state.lastResultBlob) return;
+    const file = new File([state.lastResultBlob], "kabin.jpg", { type: state.lastResultBlob.type || "image/jpeg" });
+    try { await navigator.share({ files: [file], title: "Kabin" }); } catch (_) {}
+  });
+
+  // ---------- Denemelerim ----------
+  async function trimLooks() {
+    const all = (await looksAll()) || [];
+    if (all.length > MAX_LOOKS) {
+      all.sort((a, b) => a.date - b.date);
+      for (const l of all.slice(0, all.length - MAX_LOOKS)) await looksDel(l.id);
+    }
+  }
+  const thumbUrls = [];
+  async function renderCloset() {
+    const all = ((await looksAll()) || []).sort((a, b) => b.date - a.date);
+    thumbUrls.splice(0).forEach((u) => URL.revokeObjectURL(u));
+    const grid = $("closetGrid"); grid.innerHTML = "";
+    $("closetEmpty").hidden = all.length > 0;
+    $("closetCount").textContent = all.length ? `${all.length} / ${MAX_LOOKS}` : "";
+    for (const look of all) {
+      if (!look.result) continue;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", `${CAT_NAMES[look.cat]} denemesi, ${new Date(look.date).toLocaleDateString("tr-TR")}`);
+      const u = URL.createObjectURL(look.result); thumbUrls.push(u);
+      const img = document.createElement("img"); img.src = u; img.alt = ""; img.loading = "lazy";
+      const c = document.createElement("span"); c.className = "cat"; c.textContent = CAT_NAMES[look.cat] || "";
+      b.append(img, c);
+      b.addEventListener("click", () => showResult(look));
+      grid.appendChild(b);
+    }
+  }
+
+  // ---------- Ayarlar ----------
+  const dlg = $("settings");
+  function openSettings() {
+    $("token").value = settings.token || "";
+    $("desc").value = settings.desc || "";
+    dlg.querySelectorAll("[data-eng]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.eng === settings.engine)));
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  }
+  function closeSettings() { if (dlg.close) dlg.close(); else dlg.removeAttribute("open"); }
+  $("openSettings").addEventListener("click", openSettings);
+  $("noticeSettings").addEventListener("click", openSettings);
+  $("settingsCancel").addEventListener("click", closeSettings);
+  dlg.querySelectorAll("[data-eng]").forEach((b) => b.addEventListener("click", () => {
+    dlg.querySelectorAll("[data-eng]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+  $("settingsSave").addEventListener("click", () => {
+    settings.token = $("token").value.trim();
+    settings.desc = $("desc").value.trim();
+    const sel = dlg.querySelector('[data-eng][aria-pressed="true"]');
+    settings.engine = sel ? sel.dataset.eng : "auto";
+    saveSettings(); closeSettings(); refresh(); toast("Ayarlar kaydedildi");
+  });
+  let clearArmed = false;
+  $("clearAll").addEventListener("click", async (e) => {
+    if (!clearArmed) { clearArmed = true; e.currentTarget.textContent = "Emin misin? Tekrar dokun"; setTimeout(() => { clearArmed = false; $("clearAll").textContent = "Tüm verileri sil"; }, 4000); return; }
+    try { localStorage.removeItem("kabin.settings"); } catch (_) {}
+    try { (await db()).close(); } catch (_) {}
+    dbp = null;
+    await new Promise((r) => { const q = indexedDB.deleteDatabase("kabin"); q.onsuccess = q.onerror = q.onblocked = r; });
+    location.reload();
+  });
+
+  // ---------- Toast ----------
+  let toastT = null;
+  function toast(t) {
+    const el = $("toast"); el.textContent = t; el.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => (el.hidden = true), 2200);
+  }
+
+  // ---------- Başlat ----------
+  (async () => {
+    const p = await kvGet("person");
+    if (p) { state.person = p; showInFrame($("personFrame"), p); }
+    refresh();
+    renderCloset();
+  })();
+  refresh();
+
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
